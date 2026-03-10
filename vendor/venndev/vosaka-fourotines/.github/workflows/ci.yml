@@ -1,0 +1,229 @@
+name: CI
+
+on:
+    push:
+        branches: [main, master, develop]
+    pull_request:
+        branches: [main, master, develop]
+
+jobs:
+    test:
+        name: PHP ${{ matrix.php }} / ${{ matrix.os }}
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest]
+                php: ["8.2", "8.3", "8.4"]
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup PHP (Linux)
+              if: runner.os == 'Linux'
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  extensions: shmop, fileinfo, zlib, pcntl, sysvsem, posix, sockets
+                  ini-values: max_execution_time=300
+                  coverage: none
+
+            - name: Setup PHP (Windows)
+              if: runner.os == 'Windows'
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  extensions: shmop, fileinfo, zlib, sockets
+                  ini-values: max_execution_time=300
+                  coverage: none
+
+            - name: Composer update
+              run: composer update
+
+            - name: Validate composer.json
+              run: composer validate --strict
+
+            - name: Install dependencies
+              run: composer install --prefer-dist --no-interaction --no-progress
+
+            # ==============================================================
+            #  Core / Basic tests
+            # ==============================================================
+
+            - name: Run basic tests
+              working-directory: tests
+              run: php basic.php
+
+            - name: Run improvement test suite
+              run: php tests/test_improvements.php
+
+            # ==============================================================
+            #  Async / Await / Concurrency tests
+            # ==============================================================
+
+            - name: Run async await tests
+              working-directory: tests
+              run: php test_async_await.php
+
+            - name: Run await all tests
+              working-directory: tests
+              run: php test_await_all.php
+
+            - name: Run launch delay tests
+              working-directory: tests
+              run: php test_launch_delay.php
+
+            - name: Run delay tests
+              working-directory: tests
+              run: php test_delay.php
+
+            - name: Run repeat tests
+              working-directory: tests
+              run: php test_repeat.php
+
+            - name: Run timeout tests
+              working-directory: tests
+              run: php test_with_timeout.php
+
+            - name: Run select tests
+              working-directory: tests
+              run: php test_select.php
+
+            # ==============================================================
+            #  Channel tests
+            # ==============================================================
+
+            - name: Run channel tests
+              working-directory: tests
+              run: php test_channel.php
+
+            - name: Run channel create tests
+              working-directory: tests
+              run: php test_channel_create.php
+
+            - name: Run channels utils tests
+              working-directory: tests
+              run: php test_channels_utils.php
+
+            - name: Run channel socket tests
+              working-directory: tests
+              run: php test_channel_socket.php
+
+            - name: Run channel pool tests
+              working-directory: tests
+              run: php test_channel_pool.php
+
+            - name: Run channel IO dispatchers tests
+              working-directory: tests
+              run: php test_channel_io_dispatchers.php
+
+            # ==============================================================
+            #  Synchronization tests
+            # ==============================================================
+
+            - name: Run mutex tests
+              working-directory: tests
+              run: php test_mutex.php
+
+            - name: Run shared/state flow tests
+              working-directory: tests
+              run: php test_shared_state_flow.php
+
+            # ==============================================================
+            #  Dispatcher / IO / Event loop tests
+            # ==============================================================
+
+            - name: Run dispatchers tests
+              working-directory: tests
+              run: php test_dispatchers.php
+
+            - name: Run IO tests
+              working-directory: tests
+              run: php test_io.php
+
+            - name: Run event loop tests
+              working-directory: tests
+              run: php test_event_loop.php
+
+            # ==============================================================
+            #  Job / Lifecycle / Error handling tests
+            # ==============================================================
+
+            - name: Run job lifecycle tests
+              working-directory: tests
+              run: php test_job_lifecycle.php
+
+            - name: Run error handling tests
+              working-directory: tests
+              run: php test_error_handling.php
+
+            - name: Run structured concurrency tests
+              working-directory: tests
+              run: php test_structured_concurrency.php
+
+            # ==============================================================
+            #  Worker pool tests
+            # ==============================================================
+
+            - name: Run worker pool tests
+              working-directory: tests
+              run: php test_worker_pool.php
+
+            - name: Run worker debug tests
+              working-directory: tests
+              run: php test_worker_debug.php
+
+            - name: Run task batching tests
+              working-directory: tests
+              run: php test_task_batching.php
+
+            - name: Run dynamic pool tests
+              working-directory: tests
+              run: php test_dynamic_pool.php
+
+            - name: Run worker processes tests
+              working-directory: tests
+              timeout-minutes: 3
+              run: php test_worker_processes.php
+
+            # ==============================================================
+            #  Platform diagnostic tests (pipe / stream behavior)
+            # ==============================================================
+
+            - name: Run stream_select pipe test
+              working-directory: tests
+              timeout-minutes: 1
+              run: php test_stream_select_pipe.php
+
+            - name: Run timeout pipe test
+              working-directory: tests
+              timeout-minutes: 1
+              run: php test_timeout_pipe.php
+
+            - name: Run fread nonblock test
+              working-directory: tests
+              timeout-minutes: 1
+              run: php test_fread_nonblock.php
+
+            # ==============================================================
+            #  Platform verification
+            # ==============================================================
+
+            - name: Verify ForkProcess availability (Linux only)
+              if: runner.os == 'Linux'
+              run: |
+                  php -r "
+                    require 'vendor/autoload.php';
+                    use vosaka\foroutines\ForkProcess;
+                    if (!ForkProcess::isForkAvailable()) {
+                      echo \"ERROR: pcntl_fork should be available on Linux CI\n\";
+                      exit(1);
+                    }
+                    echo \"OK: ForkProcess using pcntl_fork()\n\";
+                  "
+
+            - name: Verify ForkProcess fallback (Windows only)
+              if: runner.os == 'Windows'
+              run: |
+                  php -r "require 'vendor/autoload.php'; use vosaka\foroutines\ForkProcess; if (ForkProcess::isForkAvailable()) { echo 'ERROR: pcntl should NOT be available on Windows'; exit(1); } echo 'OK: ForkProcess will use symfony/process fallback' . PHP_EOL;"

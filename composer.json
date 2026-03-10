@@ -1,0 +1,12 @@
+{
+    "name": "venndev/vosaka-libsql",
+    "description": "One library support async for all queries database",
+    "autoload": {
+        "psr-4": {
+            "vennv\\vosaka\\libsql\\": "src/vennv/vosaka/libsql/"
+        }
+    },
+    "require": {
+        "venndev/vosaka-fourotines": "^1.4"
+    }
+}
