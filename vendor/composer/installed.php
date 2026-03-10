@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'venndev/vosaka-libsql',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '0cb03b70a6c0e392fda3576969b7518b61baa09b',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -38,9 +38,9 @@
             'dev_requirement' => false,
         ),
         'venndev/vosaka-libsql' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '0cb03b70a6c0e392fda3576969b7518b61baa09b',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

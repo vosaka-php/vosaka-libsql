@@ -1,6 +1,8 @@
 {
     "name": "venndev/vosaka-libsql",
-    "description": "One library support async for all queries database",
+    "description": "One library support async for all queries database",  
+		"type": "library",
+		"license": "MIT",
     "autoload": {
         "psr-4": {
             "vennv\\vosaka\\libsql\\": "src/vennv/vosaka/libsql/"
