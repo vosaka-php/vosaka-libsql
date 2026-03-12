@@ -61,11 +61,10 @@ function main(): void
                 $pool->execute('INSERT INTO logs (message) VALUES (?)', ["Log entry $i"])->await();
             });
         }
-        Thread::await();
-    });
 
-    // Clean up
-    $pool->closeAll()->await();
+        // Clean up
+        $pool->closeAll()->await();
+    });
 }
 ```
 
@@ -101,10 +100,8 @@ function main(): void
         Launch::new(function () use ($pool) {
             $result = $pool->query('SELECT * FROM users LIMIT 10')->await();
         });
-        Thread::await();
+        $pool->closeAll()->await();
     });
-
-    $pool->closeAll()->await();
 }
 ```
 

@@ -22,4 +22,6 @@ function main(): void {
 	)->await();
 
 	echo $result->lastInsertId;
+
+	$conn->closeAll()->awaitAll();
 }
