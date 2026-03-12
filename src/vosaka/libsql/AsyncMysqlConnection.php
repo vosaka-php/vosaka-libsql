@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace vennv\vosaka\libsql;
+namespace vosaka\libsql;
 
 use vosaka\foroutines\AsyncIO;
 use vosaka\foroutines\LazyDeferred;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace vennv\vosaka\libsql;
+namespace vosaka\libsql;
 
 /**
  * Result of an INSERT / UPDATE / DELETE statement.

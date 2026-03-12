@@ -14,8 +14,8 @@ class ComposerStaticInit9b7c0394e80efa9cd457bfbaca097bb2
     public static $prefixLengthsPsr4 = array (
         'v' =>
         array (
+            'vosaka\\libsql\\' => 14,
             'vosaka\\foroutines\\' => 18,
-            'vennv\\vosaka\\libsql\\' => 20,
         ),
         'S' =>
         array (
@@ -28,13 +28,13 @@ class ComposerStaticInit9b7c0394e80efa9cd457bfbaca097bb2
     );
 
     public static $prefixDirsPsr4 = array (
+        'vosaka\\libsql\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/src/vosaka/libsql',
+        ),
         'vosaka\\foroutines\\' =>
         array (
             0 => __DIR__ . '/..' . '/venndev/vosaka-fourotines/src/vosaka/foroutines',
-        ),
-        'vennv\\vosaka\\libsql\\' =>
-        array (
-            0 => __DIR__ . '/../..' . '/src/vennv/vosaka/libsql',
         ),
         'Symfony\\Component\\Process\\' =>
         array (

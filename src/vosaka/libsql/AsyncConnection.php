@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace vennv\vosaka\libsql;
+namespace vosaka\libsql;
 
 interface AsyncConnection {
 	public function query(string $sql, array $params = []): QueryResult;

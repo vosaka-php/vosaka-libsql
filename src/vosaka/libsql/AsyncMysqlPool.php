@@ -2,70 +2,70 @@
 
 declare(strict_types=1);
 
-namespace vennv\vosaka\libsql;
+namespace vosaka\libsql;
 
 use vosaka\foroutines\Async;
 use vosaka\foroutines\Pause;
 
 /**
- * AsyncPgsqlPool — Connection pool for AsyncPgsqlConnection.
+ * AsyncMysqlPool — Connection pool for AsyncMysqlConnection.
  *
- * Mirrors AsyncMysqlPool exactly in behaviour — only difference is it
- * holds AsyncPgsqlConnection instances and wraps transactions in
- * PostgreSQL-style BEGIN / COMMIT / ROLLBACK.
+ * Maintains a fixed pool of connections. When all connections are in use,
+ * the calling Fiber suspends cooperatively (via Pause::new) until one
+ * is released — no busy spinning, no blocking.
  *
  * Usage:
  *
- *     $pool = new AsyncPgsqlPool(
- *         host: '127.0.0.1', port: 5432,
- *         user: 'postgres', password: 'secret', database: 'mydb',
+ *     $pool = new AsyncMysqlPool(
+ *         host: '127.0.0.1', port: 3306,
+ *         user: 'root', password: 'secret', database: 'mydb',
  *         maxConnections: 10,
  *     );
  *
+ *     // Warm up connections (optional but reduces first-query latency)
  *     $pool->warmUp(5)->await();
  *
- *     $result = $pool->query('SELECT * FROM users WHERE id = $1', [1])->await();
- *     $exec   = $pool->execute('UPDATE users SET name = $1 WHERE id = $2', ['Nam', 1])->await();
- *
- *     $pool->transaction(function (AsyncDatabaseConnection $conn): void {
- *         $conn->execute('INSERT INTO orders (user_id) VALUES ($1)', [42])->await();
- *         $conn->execute('UPDATE users SET order_count = order_count + 1 WHERE id = $1', [42])->await();
- *     })->await();
+ *     // Use inside Launch::new or Async::new:
+ *     $result = $pool->query('SELECT * FROM users WHERE id = ?', [1])->await();
+ *     $exec   = $pool->execute('UPDATE users SET name = ? WHERE id = ?', ['Nam', 1])->await();
  *
  *     $pool->closeAll()->await();
  */
-final class AsyncPgsqlPool implements AsyncDatabasePool {
-	/** @var AsyncPgsqlConnection[] */
-	private array $idle  = [];
+final class AsyncMysqlPool implements AsyncDatabasePool {
+	/** @var AsyncMysqlConnection[] Idle connections available for use */
+	private array $idle = [];
 
-	/** @var array<int, AsyncPgsqlConnection> keyed by spl_object_id */
+	/** @var array<int, AsyncMysqlConnection> Connections currently in use (keyed by spl_object_id) */
 	private array $inUse = [];
 
 	private int $totalCreated = 0;
 
 	public function __construct(
 		private readonly string $host,
-		private readonly int    $port,
+		private readonly int $port,
 		private readonly string $user,
 		private readonly string $password,
 		private readonly string $database,
-		private readonly int    $maxConnections  = 10,
-		private readonly float  $connectTimeout  = 10.0,
+		private readonly int $maxConnections = 10,
+		private readonly float $connectTimeout = 10.0,
 	) {
 	}
 
+	/**
+	 * Pre-warm $count connections so they're ready before the first query.
+	 */
 	public function warmUp(int $count): Async {
 		return Async::new(function () use ($count): void {
-			$toCreate = min($count, $this->maxConnections)
-				- count($this->idle)
-				- count($this->inUse);
-
+			$toCreate = min($count, $this->maxConnections) - count($this->idle) - count($this->inUse);
 			for ($i = 0; $i < $toCreate; $i++) {
 				$this->idle[] = $this->createConnection();
 			}
 		});
 	}
 
+	/**
+	 * Run a SELECT query using a pooled connection.
+	 */
 	public function query(string $sql, array $params = []): Async {
 		return Async::new(function () use ($sql, $params): QueryResult {
 			$conn = $this->acquire();
@@ -77,6 +77,9 @@ final class AsyncPgsqlPool implements AsyncDatabasePool {
 		});
 	}
 
+	/**
+	 * Run an INSERT/UPDATE/DELETE using a pooled connection.
+	 */
 	public function execute(string $sql, array $params = []): Async {
 		return Async::new(function () use ($sql, $params): ExecuteResult {
 			$conn = $this->acquire();
@@ -89,19 +92,19 @@ final class AsyncPgsqlPool implements AsyncDatabasePool {
 	}
 
 	/**
-	 * Run a callback inside a PostgreSQL transaction.
+	 * Run multiple queries in a transaction.
 	 *
-	 * The connection passed to $callback is the raw AsyncPgsqlConnection —
-	 * type-hinted as AsyncDatabaseConnection so code stays driver-agnostic.
-	 *
-	 * Uses BEGIN / COMMIT / ROLLBACK (standard SQL, same as MySQL
-	 * START TRANSACTION / COMMIT / ROLLBACK in semantics).
+	 * Example:
+	 *   $pool->transaction(function(AsyncMysqlConnection $conn): mixed {
+	 *       $conn->execute('INSERT INTO ...', [...])->await();
+	 *       return $conn->query('SELECT ...')->await();
+	 *   })->await();
 	 */
 	public function transaction(callable $callback): Async {
 		return Async::new(function () use ($callback): mixed {
 			$conn = $this->acquire();
 			try {
-				$conn->execute('BEGIN')->await();
+				$conn->execute('START TRANSACTION')->await();
 				$result = $callback($conn);
 				$conn->execute('COMMIT')->await();
 				return $result;
@@ -117,6 +120,9 @@ final class AsyncPgsqlPool implements AsyncDatabasePool {
 		});
 	}
 
+	/**
+	 * Close all connections (idle + in-use).
+	 */
 	public function closeAll(): Async {
 		return Async::new(function (): void {
 			foreach ($this->idle as $conn) {
@@ -131,31 +137,30 @@ final class AsyncPgsqlPool implements AsyncDatabasePool {
 				} catch (\Throwable) {
 				}
 			}
-			$this->idle         = [];
-			$this->inUse        = [];
+			$this->idle = [];
+			$this->inUse = [];
 			$this->totalCreated = 0;
 		});
 	}
 
 	public function stats(): array {
 		return [
-			'idle'    => count($this->idle),
-			'in_use'  => count($this->inUse),
-			'total'   => $this->totalCreated,
-			'max'     => $this->maxConnections,
+			'idle' => count($this->idle),
+			'in_use' => count($this->inUse),
+			'total' => $this->totalCreated,
+			'max' => $this->maxConnections,
 		];
 	}
 
 	/**
 	 * Acquire a connection from the pool.
 	 *
-	 * Priority:
-	 *   1. Reuse an idle connection (stream still alive)
-	 *   2. Create a new connection if under limit
-	 *   3. Cooperatively suspend via Pause::new() until one is released
+	 * If an idle connection is available, return it immediately.
+	 * If under the max limit, create a new one.
+	 * Otherwise, cooperatively suspend via Pause::new() until one is released.
 	 */
-	private function acquire(): AsyncPgsqlConnection {
-		// Prefer idle — discard stale ones
+	private function acquire(): AsyncMysqlConnection {
+		// Try idle connections first — no ping, just stream check
 		while (!empty($this->idle)) {
 			$conn = array_pop($this->idle);
 			if ($conn->isConnected()) {
@@ -165,14 +170,14 @@ final class AsyncPgsqlPool implements AsyncDatabasePool {
 			$this->totalCreated--;
 		}
 
-		// Under limit — spin up a fresh connection
+		// Under the limit — create a new connection
 		if ($this->totalCreated < $this->maxConnections) {
 			$conn = $this->createConnection();
 			$this->inUse[spl_object_id($conn)] = $conn;
 			return $conn;
 		}
 
-		// Pool exhausted — yield cooperatively
+		// Pool exhausted — yield cooperatively until a connection is released
 		if (\Fiber::getCurrent() !== null) {
 			while (empty($this->idle)) {
 				Pause::new();
@@ -193,19 +198,20 @@ final class AsyncPgsqlPool implements AsyncDatabasePool {
 		return $this->acquire();
 	}
 
-	private function release(AsyncPgsqlConnection $conn): void {
+	private function release(AsyncMysqlConnection $conn): void {
 		$id = spl_object_id($conn);
 		unset($this->inUse[$id]);
 
 		if ($conn->isConnected()) {
 			$this->idle[] = $conn;
 		} else {
+			// Connection died during query — remove from pool count
 			$this->totalCreated--;
 		}
 	}
 
-	private function createConnection(): AsyncPgsqlConnection {
-		$conn = new AsyncPgsqlConnection(
+	private function createConnection(): AsyncMysqlConnection {
+		$conn = new AsyncMysqlConnection(
 			$this->host,
 			$this->port,
 			$this->user,

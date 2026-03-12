@@ -6,8 +6,8 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'vosaka\\libsql\\' => array($baseDir . '/src/vosaka/libsql'),
     'vosaka\\foroutines\\' => array($vendorDir . '/venndev/vosaka-fourotines/src/vosaka/foroutines'),
-    'vennv\\vosaka\\libsql\\' => array($baseDir . '/src/vennv/vosaka/libsql'),
     'Symfony\\Component\\Process\\' => array($vendorDir . '/symfony/process'),
     'Laravel\\SerializableClosure\\' => array($vendorDir . '/laravel/serializable-closure/src'),
 );

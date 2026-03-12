@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . "/../vendor/autoload.php";
 
-use vennv\vosaka\libsql\AsyncPgsqlPool;
+use vosaka\libsql\AsyncPgsqlPool;
 use vosaka\foroutines\AsyncMain;
 
 #[AsyncMain]

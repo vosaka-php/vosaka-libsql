@@ -31,7 +31,7 @@ Here is a quick example of how to use the `AsyncMysqlPool` to run concurrent que
 
 require 'vendor/autoload.php';
 
-use vennv\vosaka\libsql\AsyncMysqlPool;
+use vosaka\libsql\AsyncMysqlPool;
 use vosaka\foroutines\AsyncMain;
 use vosaka\foroutines\Launch;
 use vosaka\foroutines\Thread;
@@ -78,7 +78,7 @@ Using PostgreSQL is just as easy with `AsyncPgsqlPool`:
 
 require 'vendor/autoload.php';
 
-use vennv\vosaka\libsql\AsyncPgsqlPool;
+use vosaka\libsql\AsyncPgsqlPool;
 use vosaka\foroutines\AsyncMain;
 use vosaka\foroutines\Launch;
 use vosaka\foroutines\Thread;

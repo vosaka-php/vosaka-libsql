@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 require __DIR__ . "/../vendor/autoload.php";
 
-use vennv\vosaka\libsql\AsyncMysqlConnection;
-use vennv\vosaka\libsql\AsyncMysqlPool;
+use vosaka\libsql\AsyncMysqlConnection;
+use vosaka\libsql\AsyncMysqlPool;
 use vosaka\foroutines\AsyncMain;
 
 #[AsyncMain]

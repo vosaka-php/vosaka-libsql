@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace vennv\vosaka\libsql;
+namespace vosaka\libsql;
 
 /**
  * Result of a SELECT query.
